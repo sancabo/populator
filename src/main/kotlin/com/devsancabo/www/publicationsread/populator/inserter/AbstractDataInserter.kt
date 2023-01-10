@@ -31,7 +31,7 @@ abstract class AbstractDataInserter<T> : Runnable {
      */
     protected constructor(
         dataAmount: Int,
-        dataProducer: Supplier<T>?,
+        dataProducer: Supplier<T>,
         dataPersister: Consumer<T>,
         latch: CountDownLatch,
         runForever: Boolean
