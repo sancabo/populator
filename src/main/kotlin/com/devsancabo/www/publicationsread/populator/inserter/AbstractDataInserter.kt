@@ -83,18 +83,24 @@ abstract class AbstractDataInserter<T> : Runnable {
      */
     abstract val dTORepresentation: InserterDTO
     override fun run() {
-        if (runForever) {
-            while (!error && !finished) {
-                prepareDataForDataSaver().accept(dataSaver())
+        try{
+            if (runForever) {
+                while (!error && !finished) {
+                    prepareDataForDataSaver().accept(dataSaver())
+                }
+            } else {
+                for (i in 0 until dataAmount) {
+                    if (error || finished) break
+                    prepareDataForDataSaver().accept(dataSaver())
+                }
             }
-        } else {
-            for (i in 0 until dataAmount) {
-                if (error || finished) break
-                prepareDataForDataSaver().accept(dataSaver())
-            }
+        } catch (e : Exception){
+            logger.info("Stopping inserter because of exception: {}", e.localizedMessage)
         }
-        latch.countDown()
-        finished = true
+        if (!finished) {
+            latch.countDown()
+            finished = true
+        }
         logger.info("Stopped inserter: error={}", error)
     }
 }

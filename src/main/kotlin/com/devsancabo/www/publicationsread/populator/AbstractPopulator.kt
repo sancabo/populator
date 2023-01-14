@@ -42,10 +42,10 @@ abstract class AbstractPopulator<T> protected constructor(
         if (status != Status.RUNNING) {
             status = Status.RUNNING
             currentIntensity = intensity
-            latch = CountDownLatch(currentIntensity!!)
+            latch = CountDownLatch(currentIntensity)
             populatorMap.clear()
             this.runForever = runForever
-            for (i in 1 until currentIntensity!! + 1) {
+            for (i in 1 until currentIntensity + 1) {
                 val dbInserter = getInserter(amountToInsert, dataProducer, dataPersister, latch!!,
                     this.runForever
                 )
@@ -56,37 +56,22 @@ abstract class AbstractPopulator<T> protected constructor(
                 populatorMap[thread.name] = thread
             }
         }
+        Thread({ waitForInsertersToEnd() }, "populator-stopper").start()
         return populatorDTO
     }
 
     override fun stopPopulator() {
         if (status == Status.RUNNING) {
             status = Status.STOPPING
-            Thread({
-                populatorMap.forEach { (_, v: Thread) -> v.interrupt() }
-                var countedToZero = false
-                try {
-                    countedToZero = latch!!.await(timeoutInMillis.toLong(), TimeUnit.MILLISECONDS)
-                } catch (e: InterruptedException) {
-                    e.printStackTrace()
-                    latch = null
-                    status = Status.FAULTED
-                    Thread.currentThread().interrupt()
-                }
-                populatorMap.clear()
-                status = if (countedToZero) {
-                    Status.STOPPED
-                } else {
-                    Status.STOPPED_WITH_ERRORS
-                }
-            }, "populator-stopper").start()
+            populatorMap.forEach { (_, v: Thread) -> v.interrupt() }
         }
     }
 
     override val populatorDTO: GetPopulatorResponseDTO
         get() = GetPopulatorResponseDTO.builder()
             .activeInserterCount(
-                populatorMap.entries.stream().filter { (_, value): Map.Entry<String, Thread> -> !value.isInterrupted }
+                populatorMap.entries.stream().filter {
+                        (_, value): Map.Entry<String, Thread> -> !value.isInterrupted && value.isAlive}
                     .count())
             .inserterCount(populatorMap.size)
             .runForever(runForever)
@@ -102,5 +87,26 @@ abstract class AbstractPopulator<T> protected constructor(
         currentIntensity = 1
         populatorMap.clear()
         return populatorDTO
+    }
+
+
+    private fun waitForInsertersToEnd(){
+
+        var countedToZero = false
+        try {
+            countedToZero = latch!!.await(timeoutInMillis.toLong(), TimeUnit.MILLISECONDS)
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+            latch = null
+            status = Status.FAULTED
+            Thread.currentThread().interrupt()
+        }
+        populatorMap.clear()
+        status = if (countedToZero) {
+            Status.STOPPED
+        } else {
+            Status.STOPPED_WITH_ERRORS
+        }
+        TODO("Fix the timeout")
     }
 }
