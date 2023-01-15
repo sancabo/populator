@@ -2,111 +2,140 @@ package com.devsancabo.www.publicationsread.populator
 
 import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
 import com.devsancabo.www.publicationsread.populator.inserter.AbstractDataInserter
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.time.Instant
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.function.Consumer
-import java.util.function.Supplier
 
 abstract class AbstractPopulator<T> protected constructor(
-    private var dataProducer: Supplier<T>, protected var dataPersister: Consumer<T>,
-    private val amountToInsert: Int, private val timeoutInMillis: Int
+    private val amountToInsert: Int, private val timeoutInMillis: Int,
 ) : Populator<T> {
+    private val logger : Logger = LoggerFactory.getLogger(AbstractPopulator::class.java)
     private val populatorMap: MutableMap<String, Thread> = HashMap()
     private var currentIntensity: Int = 1
-    private var latch: CountDownLatch? = null
-    private var status: Status = Status.UNINITIALIZED
+    private var latch: CountDownLatch = CountDownLatch(1)
+    private var currentStatus: Status = Status.UNINITIALIZED
     private var currentInserter: AbstractDataInserter<T>? = null
     private var runForever = true
+    private var lastStateChangeTime : Long = Instant.now().toEpochMilli()
+    private var waitForEndThread :Thread? = null
+    private val statusLock : Any = Any()
 
-    enum class Status {
-        UNINITIALIZED, RUNNING, FAULTED, STOPPING, STOPPED, STOPPED_WITH_ERRORS
+    enum class Status(val allowed : Array<Short>) {
+        UNINITIALIZED(arrayOf(1)), //0
+        RUNNING(arrayOf(3,4,5)), //1
+        FAULTED(arrayOf(0)), //2
+        STOPPING(arrayOf(2,4,5)), //3
+        STOPPED(arrayOf(1,0)), //4
+        STOPPED_WITH_ERRORS(arrayOf(1,0)) //5
+
+
+    }
+    private fun goTo(newStatus : Status, handler: Runnable = Runnable{}){
+        synchronized(statusLock) {
+            if (!currentStatus.allowed.contains(newStatus.ordinal.toShort())) {
+                throw IllegalStateException("Cannot perform operation: Illegal state transition form $this to $newStatus")
+            }
+            currentStatus = newStatus
+            lastStateChangeTime = Instant.now().toEpochMilli()
+            handler.run()
+        }
     }
 
-    //TODO: I want the populator to stop itself when it finishes
-    //TODO: I want to add cadence to inserters
-    //TODO: I want to be able to modify the populator while it's running
-    //TODO: Use an executor service instead of creating threads manually
+
+    /*
+    TODO: Make into a component. Set the inserter by composition
+    TODO: I want to add cadence to inserters
+    TODO: I want to be able to modify the populator while it's running
+    TODO: Use an executor service instead of creating threads manually
+    */
 
     abstract fun getInserter(
         amountToInsert: Int,
-        dataProducer: Supplier<T>,
-        dataPersister: Consumer<T>,
         latch: CountDownLatch,
         runForever: Boolean
     ): AbstractDataInserter<T>
 
     override fun startPopulator(intensity: Int, runForever: Boolean): GetPopulatorResponseDTO {
-        if (status == Status.FAULTED) {
-            throw UnsupportedOperationException("Populator is faulty. Please Restart It.")
+        logger.info("Starting Populator.")
+        goTo(Status.RUNNING)
+        lastStateChangeTime = Instant.now().toEpochMilli()
+        currentIntensity = intensity
+        latch = CountDownLatch(currentIntensity)
+        populatorMap.clear()
+        this.runForever = runForever
+        for (i in 1 until currentIntensity + 1) {
+            val dbInserter = getInserter(amountToInsert, latch,this.runForever)
+            currentInserter = dbInserter
+            val thread = Thread(dbInserter)
+            thread.name = "DbInserter-$i"
+            thread.start()
+            populatorMap[thread.name] = thread
         }
-        if (status != Status.RUNNING) {
-            status = Status.RUNNING
-            currentIntensity = intensity
-            latch = CountDownLatch(currentIntensity)
-            populatorMap.clear()
-            this.runForever = runForever
-            for (i in 1 until currentIntensity + 1) {
-                val dbInserter = getInserter(amountToInsert, dataProducer, dataPersister, latch!!,
-                    this.runForever
-                )
-                currentInserter = dbInserter
-                val thread = Thread(dbInserter)
-                thread.name = "DbInserter-$i"
-                thread.start()
-                populatorMap[thread.name] = thread
-            }
-        }
-        Thread({ waitForInsertersToEnd() }, "populator-stopper").start()
+        logger.info("Populator Started.")
+        waitForEndThread = Thread({ waitForInsertersToEnd() }, "populator-stopper")
+        waitForEndThread?.start()
         return populatorDTO
     }
 
     override fun stopPopulator() {
-        if (status == Status.RUNNING) {
-            status = Status.STOPPING
-            populatorMap.forEach { (_, v: Thread) -> v.interrupt() }
+        logger.info("Stopping Populator.")
+        goTo(Status.STOPPING)
+        populatorMap.forEach { (_, v: Thread) -> v.interrupt() }
+        waitForEndThread?.join(5000)
+        if (checkNotNull(waitForEndThread?.isAlive)) {
+            logger.info("Stopping timeout exceeded. Forcefully stopping instead.")
+            waitForEndThread?.interrupt()
+            waitForEndThread?.join(1000)
+            if (checkNotNull(waitForEndThread?.isAlive)) {
+                logger.info("Couldn't stop Populator. It needs to be restarted")
+                goTo(Status.FAULTED)
+            }
         }
+
+        logger.info("Populator stopped.")
     }
 
     override val populatorDTO: GetPopulatorResponseDTO
-        get() = GetPopulatorResponseDTO.builder()
-            .activeInserterCount(
-                populatorMap.entries.stream().filter {
-                        (_, value): Map.Entry<String, Thread> -> !value.isInterrupted && value.isAlive}
-                    .count())
-            .inserterCount(populatorMap.size)
-            .runForever(runForever)
-            .insetionsPerThread(amountToInsert)
-            .status(status)
-            .intensity(currentIntensity)
-            .inserterSpec(currentInserter?.dTORepresentation)
-            .build()
+        get() {
+            val resultDTO =
+                GetPopulatorResponseDTO.builder()
+                .activeInserterCount(
+                    populatorMap.entries.stream().filter {
+                            (_, value): Map.Entry<String, Thread> -> !value.isInterrupted && value.isAlive}
+                        .count())
+                .inserterCount(populatorMap.size)
+                .runForever(runForever)
+                .insertionsPerThread(amountToInsert)
+                .status(currentStatus)
+                .intensity(currentIntensity)
+                .inserterSpec(currentInserter?.dTORepresentation)
+                .timeInCurrentStatus(Instant.now().toEpochMilli() - lastStateChangeTime)
+                .build()
+            return resultDTO}
 
     override fun resetPopulator(): GetPopulatorResponseDTO {
-        latch = null
-        status = Status.UNINITIALIZED
+        logger.info("Resetting Populator.")
+        goTo(Status.UNINITIALIZED)
+        latch = CountDownLatch(1)
         currentIntensity = 1
         populatorMap.clear()
+        waitForEndThread = null
         return populatorDTO
     }
 
-
     private fun waitForInsertersToEnd(){
-
-        var countedToZero = false
+        var newStatus = Status.STOPPED
         try {
-            countedToZero = latch!!.await(timeoutInMillis.toLong(), TimeUnit.MILLISECONDS)
+            latch.await()
         } catch (e: InterruptedException) {
-            e.printStackTrace()
-            latch = null
-            status = Status.FAULTED
+            logger.info("Requested premature stop")
             Thread.currentThread().interrupt()
+            newStatus = Status.STOPPED_WITH_ERRORS
         }
+        logger.info("All inserters stopped. Populator finished.")
         populatorMap.clear()
-        status = if (countedToZero) {
-            Status.STOPPED
-        } else {
-            Status.STOPPED_WITH_ERRORS
-        }
-        TODO("Fix the timeout")
+        goTo(newStatus)
+
     }
 }
