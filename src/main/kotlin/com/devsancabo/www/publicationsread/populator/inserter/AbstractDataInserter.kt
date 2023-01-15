@@ -16,9 +16,8 @@ abstract class AbstractDataInserter<T> : Runnable {
 
 
     /**
-     * Represents one process that takes an object T from a producer, and saves it in an arbitrary destination.
+     * Represents one process that takes an object or record, and saves it in an arbitrary destination.
      * @param dataAmount amount records that will be created at the destination.
-     * @param dataPersister a function that handles the data saving. For example, a call to a save() on a DB.
      * @param latch a CountDownLatch that the inserter must call when it finishes or is interrupted
      * @param runForever Whether this inserter should execute indefinitely
      */
@@ -32,12 +31,7 @@ abstract class AbstractDataInserter<T> : Runnable {
         this.dataAmount = dataAmount
     }
 
-    private constructor() {
-        dataAmount = 1
-        latch = CountDownLatch(1)
-        throw UnsupportedOperationException("Default Constructor should never be called")
-    }
-
+    private constructor() {}
 
     /**
      * Actions to perform before calling the Producer

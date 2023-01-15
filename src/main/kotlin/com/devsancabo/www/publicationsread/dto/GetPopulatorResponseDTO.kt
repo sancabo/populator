@@ -1,9 +1,9 @@
 package com.devsancabo.www.publicationsread.dto
 
-import com.devsancabo.www.publicationsread.populator.AbstractPopulator
+import com.devsancabo.www.publicationsread.populator.DefaultPopulator
 
 
-data class GetPopulatorResponseDTO(val status: AbstractPopulator.Status? = null,
+data class GetPopulatorResponseDTO(val status: DefaultPopulator.Status? = null,
                                    val timeInCurrentStatus: Long? = null,
                                    val insertionsPerThread: Int? = null,
                                    val runForever: Boolean? = null,
@@ -13,7 +13,7 @@ data class GetPopulatorResponseDTO(val status: AbstractPopulator.Status? = null,
                                    val inserterSpec: InserterDTO? = null) {
 
     class Builder(
-        private var statusB: AbstractPopulator.Status? = null,
+        private var statusB: DefaultPopulator.Status? = null,
         private var timeSinceLastStateChangeB: Long? = null,
         private var insertionsPerThreadB: Int? = null,
         private var runForeverB: Boolean? = null,
@@ -27,7 +27,7 @@ data class GetPopulatorResponseDTO(val status: AbstractPopulator.Status? = null,
         fun inserterCount(inserterCount: Int) = apply {this.inserterCountB = inserterCount}
         fun runForever(runForever: Boolean) = apply {this.runForeverB = runForever}
         fun insertionsPerThread(insertionsPerThread: Int) = apply {this.insertionsPerThreadB = insertionsPerThread}
-        fun status(status: AbstractPopulator.Status?) = apply {this.statusB = status}
+        fun status(status: DefaultPopulator.Status?) = apply {this.statusB = status}
         fun intensity(intensity: Int) = apply {this.intensityB = intensity}
         fun inserterSpec(inserterSpec: InserterDTO?) = apply {this.inserterSpecB = inserterSpec}
         fun build() = GetPopulatorResponseDTO(statusB, timeSinceLastStateChangeB,

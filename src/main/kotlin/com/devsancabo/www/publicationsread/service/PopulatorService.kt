@@ -6,4 +6,5 @@ interface PopulatorService {
     fun startPopulator(intensity: Int, runForever: Boolean): GetPopulatorResponseDTO
     fun stopPopulators()
     fun gerPopulator(): GetPopulatorResponseDTO
+    fun resetPopulator(): GetPopulatorResponseDTO
 }

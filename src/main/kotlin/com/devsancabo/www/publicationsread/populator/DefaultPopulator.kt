@@ -4,13 +4,23 @@ import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
 import com.devsancabo.www.publicationsread.populator.inserter.AbstractDataInserter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
 
-abstract class AbstractPopulator<T> protected constructor(
-    private val amountToInsert: Int, private val timeoutInMillis: Int,
+@Component
+class DefaultPopulator<T> @Autowired constructor(
+     private val inserterFactory : InserterFactory<AbstractDataInserter<T>>
 ) : Populator<T> {
-    private val logger : Logger = LoggerFactory.getLogger(AbstractPopulator::class.java)
+
+    @Value("#{amount.to.insert:1000}")
+    private var amountToInsert: Int = 100
+    @Value("#{timeout:5000}")
+    private var timeoutInMillis: Int = 1000
+
+    private val logger : Logger = LoggerFactory.getLogger(DefaultPopulator::class.java)
     private val populatorMap: MutableMap<String, Thread> = HashMap()
     private var currentIntensity: Int = 1
     private var latch: CountDownLatch = CountDownLatch(1)
@@ -44,17 +54,10 @@ abstract class AbstractPopulator<T> protected constructor(
 
 
     /*
-    TODO: Make into a component. Set the inserter by composition
-    TODO: I want to add cadence to inserters
-    TODO: I want to be able to modify the populator while it's running
-    TODO: Use an executor service instead of creating threads manually
+    TODO: Test
+    TODO: Configurable properties.
+    TODO: I want to add cadence to inserters.
     */
-
-    abstract fun getInserter(
-        amountToInsert: Int,
-        latch: CountDownLatch,
-        runForever: Boolean
-    ): AbstractDataInserter<T>
 
     override fun startPopulator(intensity: Int, runForever: Boolean): GetPopulatorResponseDTO {
         logger.info("Starting Populator.")
@@ -64,11 +67,10 @@ abstract class AbstractPopulator<T> protected constructor(
         latch = CountDownLatch(currentIntensity)
         populatorMap.clear()
         this.runForever = runForever
+        currentInserter = inserterFactory.createInserter(amountToInsert, latch, runForever)
         for (i in 1 until currentIntensity + 1) {
-            val dbInserter = getInserter(amountToInsert, latch,this.runForever)
-            currentInserter = dbInserter
-            val thread = Thread(dbInserter)
-            thread.name = "DbInserter-$i"
+            val dbInserter = inserterFactory.createInserter(amountToInsert, latch, runForever)
+            val thread = Thread(dbInserter,"DbInserter-$i")
             thread.start()
             populatorMap[thread.name] = thread
         }
