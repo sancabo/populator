@@ -1,6 +1,6 @@
-package com.devsancabo.www.publicationsread.populator.inserter
+package com.devsancabo.www.populator.populator.inserter
 
-import com.devsancabo.www.publicationsread.dto.InserterDTO
+import com.devsancabo.www.populator.dto.InserterDTO
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CountDownLatch
 

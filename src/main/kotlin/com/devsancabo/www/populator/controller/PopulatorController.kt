@@ -1,7 +1,7 @@
-package com.devsancabo.www.publicationsread.controller
+package com.devsancabo.www.populator.controller
 
-import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
-import com.devsancabo.www.publicationsread.service.PopulatorService
+import com.devsancabo.www.populator.dto.GetPopulatorResponseDTO
+import com.devsancabo.www.populator.service.PopulatorService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*

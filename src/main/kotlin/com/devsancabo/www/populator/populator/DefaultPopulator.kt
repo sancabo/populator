@@ -1,7 +1,7 @@
-package com.devsancabo.www.publicationsread.populator
+package com.devsancabo.www.populator.populator
 
-import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
-import com.devsancabo.www.publicationsread.populator.inserter.AbstractDataInserter
+import com.devsancabo.www.populator.dto.GetPopulatorResponseDTO
+import com.devsancabo.www.populator.populator.inserter.AbstractDataInserter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -12,12 +12,12 @@ import java.util.concurrent.CountDownLatch
 
 @Component
 class DefaultPopulator<T> @Autowired constructor(
-     private val inserterFactory : InserterFactory<AbstractDataInserter<T>>
+    private val inserterFactory: InserterFactory<AbstractDataInserter<T>>
 ) : Populator<T> {
 
-    @Value("#{amount.to.insert:1000}")
+    @Value("\${amount.to.insert:5000}")
     private var amountToInsert: Int = 100
-    @Value("#{timeout:5000}")
+    @Value("\${timeout:1000}")
     private var timeoutInMillis: Int = 1000
 
     private val logger : Logger = LoggerFactory.getLogger(DefaultPopulator::class.java)
@@ -38,8 +38,6 @@ class DefaultPopulator<T> @Autowired constructor(
         STOPPING(arrayOf(2,4,5)), //3
         STOPPED(arrayOf(1,0)), //4
         STOPPED_WITH_ERRORS(arrayOf(1,0)) //5
-
-
     }
     private fun goTo(newStatus : Status, handler: Runnable = Runnable{}){
         synchronized(statusLock) {

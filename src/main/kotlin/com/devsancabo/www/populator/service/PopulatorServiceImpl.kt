@@ -1,8 +1,7 @@
-package com.devsancabo.www.publicationsread.service
+package com.devsancabo.www.populator.service
 
-import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
-import com.devsancabo.www.publicationsread.populator.Populator
-import org.slf4j.LoggerFactory
+import com.devsancabo.www.populator.dto.GetPopulatorResponseDTO
+import com.devsancabo.www.populator.populator.Populator
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
