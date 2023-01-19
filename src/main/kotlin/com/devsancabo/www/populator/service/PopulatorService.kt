@@ -1,6 +1,6 @@
-package com.devsancabo.www.publicationsread.service
+package com.devsancabo.www.populator.service
 
-import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
+import com.devsancabo.www.populator.dto.GetPopulatorResponseDTO
 
 interface PopulatorService {
     fun startPopulator(intensity: Int, runForever: Boolean): GetPopulatorResponseDTO

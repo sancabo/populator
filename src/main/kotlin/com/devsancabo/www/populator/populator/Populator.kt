@@ -1,6 +1,6 @@
-package com.devsancabo.www.publicationsread.populator
+package com.devsancabo.www.populator.populator
 
-import com.devsancabo.www.publicationsread.dto.GetPopulatorResponseDTO
+import com.devsancabo.www.populator.dto.GetPopulatorResponseDTO
 
 sealed interface Populator<T> {
     fun startPopulator(intensity: Int, runForever: Boolean): GetPopulatorResponseDTO

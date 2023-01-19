@@ -1,6 +1,6 @@
-package com.devsancabo.www.publicationsread.dto
+package com.devsancabo.www.populator.dto
 
-import com.devsancabo.www.publicationsread.populator.DefaultPopulator
+import com.devsancabo.www.populator.populator.DefaultPopulator
 
 
 data class GetPopulatorResponseDTO(val status: DefaultPopulator.Status? = null,
