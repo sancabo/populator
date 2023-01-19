@@ -11,6 +11,7 @@ class TestDataInserter(dataAmount: Int, latch: CountDownLatch, runForever: Boole
     AbstractDataInserter<String>(dataAmount, latch, runForever) {
 
     private val logger : Logger = LoggerFactory.getLogger(javaClass)
+
     override fun saveRecord(value: String) {
         logger.info("Saved record : $value")
     }

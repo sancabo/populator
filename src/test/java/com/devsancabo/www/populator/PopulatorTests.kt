@@ -1,7 +1,6 @@
 package com.devsancabo.www.populator
 
 import com.devsancabo.www.populator.populator.*
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
