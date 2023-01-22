@@ -13,6 +13,7 @@ class TestDataInserter(dataAmount: Int, latch: CountDownLatch, runForever: Boole
     private val logger : Logger = LoggerFactory.getLogger(javaClass)
 
     override fun saveRecord(value: String) {
+        Thread.sleep(50)
         logger.info("Saved record : $value")
     }
 
