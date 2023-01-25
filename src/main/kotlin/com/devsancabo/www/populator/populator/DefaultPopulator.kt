@@ -51,12 +51,6 @@ class DefaultPopulator<T> @Autowired constructor(
     }
 
 
-    /*
-    TODO: Test
-    TODO: Configurable properties.
-    TODO: I want to add cadence to inserters.
-    */
-
     override fun startPopulator(intensity: Int, runForever: Boolean): GetPopulatorResponseDTO {
         logger.info("Starting Populator.")
         goTo(Status.RUNNING)
