@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 
 
+private const val HALF_SECOND_MILLIS = 500L;
+
 class PopulatorTests {
 
     private val inserterFactory : InserterFactory<TestDataInserter> = TestInserterFactory()
@@ -33,17 +35,27 @@ class PopulatorTests {
     fun testStartStop() {
         populator.startPopulator(2, true)
         Assertions.assertEquals(DefaultPopulator.Status.RUNNING,populator.populatorDTO.status)
-        Thread.sleep(500)
+        Thread.sleep(HALF_SECOND_MILLIS)
         populator.stopPopulator()
         Assertions.assertEquals(DefaultPopulator.Status.STOPPED,populator.populatorDTO.status)
     }
 
     @Test
     fun illegalStateTransitions() {
-        populator.startPopulator(2, true)
+        populator.startPopulator(2, true);
+        Thread.sleep(HALF_SECOND_MILLIS)
         Assertions.assertThrows(IllegalStateException::class.java) { populator.startPopulator(2, true) }
         Assertions.assertEquals(DefaultPopulator.Status.RUNNING,populator.populatorDTO.status)
         Assertions.assertEquals(2,populator.populatorDTO.activeInserterCount)
         populator.stopPopulator()
+    }
+
+    @Test
+    fun resetPopulator() {
+        populator.startPopulator(1, false);
+        populator.stopPopulator()
+        Thread.sleep(HALF_SECOND_MILLIS);
+        populator.resetPopulator();
+        Assertions.assertEquals(DefaultPopulator.Status.UNINITIALIZED, populator.populatorDTO.status)
     }
 }

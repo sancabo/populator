@@ -42,7 +42,7 @@ class DefaultPopulator<T> @Autowired constructor(
     private fun goTo(newStatus : Status, handler: Runnable = Runnable{}){
         synchronized(statusLock) {
             if (!currentStatus.allowed.contains(newStatus.ordinal.toShort())) {
-                throw IllegalStateException("Cannot perform operation: Illegal state transition form $this to $newStatus")
+                throw IllegalStateException("Cannot perform operation: Illegal state transition form ${this.currentStatus} to $newStatus")
             }
             currentStatus = newStatus
             lastStateChangeTime = Instant.now().toEpochMilli()
