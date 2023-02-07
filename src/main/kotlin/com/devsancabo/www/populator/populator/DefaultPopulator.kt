@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.concurrent.CountDownLatch
 
+/**
+ * Main implementation of populator. It implements a state machine and the creation of data inserter threads.
+ */
 @Component
 class DefaultPopulator<T> @Autowired constructor(
     private val inserterFactory: InserterFactory<AbstractDataInserter<T>>
