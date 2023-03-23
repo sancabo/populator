@@ -10,3 +10,5 @@ This class needs to implement the Producer and Consumer methods, to specify how 
 The destination can be anything here. A log call, a text file, a database, etc.
 
 The Populator controls are thread safe. Any state changes are atomic. and api operations are idempotent.
+
+WIP: Describe API for controlling the application.
